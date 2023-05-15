@@ -1,0 +1,7 @@
+{
+    "maxFileSize": 100,
+    "allowEmptyFiles": false,
+    "queueSize": 4,
+    "partSize": 5,
+    "leavePartsOnError": false
+}

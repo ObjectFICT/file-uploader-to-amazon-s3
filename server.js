@@ -1,10 +1,10 @@
+require('dotenv').config();
+
 const express = require('express');
 const app = express();
-const PORT = process.env.PORT;
 const path = require("path");
+const PORT = process.env.PORT;
 const fileParser = require('./fileparser');
-
-require('dotenv').config();
 
 app.set('json spaces', 5);
 app.use(express.static('public'))
@@ -17,8 +17,9 @@ app.post('/api/upload', async (req, res) => {
   await fileParser(req)
     .then(data => {
       res.status(200).json({
-        message: "Success",
-        data
+        statusCode: data.statusCode,
+        post_uuid: data.post_uuid,
+        s3_bucket_retrieval_link: data.s3_bucket_retrieval_link
       })
     })
     .catch(error => {

@@ -3,18 +3,17 @@ const get = (el) => document.getElementById(el);
 const progressHandler = (event) => {
   const percent = (event.loaded / event.total) * 100;
 
-  get("loaded_n_total").innerHTML = "Uploaded " + event.loaded + " bytes of " + event.total;
+  get("uploadedFileSize").innerHTML = "Uploaded " + event.loaded + " bytes of " + event.total;
   get("progressBar").value = Math.round(percent);
   get("status").innerHTML = Math.round(percent) + "% uploaded... please wait";
 
   if (Math.round(percent) === 100) {
     get("status").innerHTML = "Successfully uploaded!";
-    get("loaded_n_total").innerHTML = "Uploaded " + event.total + " bytes!";
+    get("uploadedFileSize").innerHTML = "Uploaded " + event.total + " bytes!";
   }
 }
 
 const completeHandler = (event) => {
-  get("status").innerHTML = event.target.responseText;
   get("progressBar").value = 0;
 }
 
@@ -29,7 +28,7 @@ const abortHandler = (event) => {
 const selectFileHandler = () => {
   get("progressBar").value = 0;
   get("status").innerHTML = null;
-  get("loaded_n_total").innerHTML = null;
+  get("uploadedFileSize").innerHTML = null;
 }
 
 const uploadFile = () => {
