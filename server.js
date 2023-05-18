@@ -23,9 +23,8 @@ app.post('/api/upload', async (req, res) => {
       })
     })
     .catch(error => {
-      res.status(400).json({
-        message: "An error occurred.",
-        error
+      res.status(500).json({
+        error: error
       })
     })
 });

@@ -18,6 +18,7 @@ const completeHandler = (event) => {
 }
 
 const errorHandler = (event) => {
+  console.log("handle error")
   get("status").innerHTML = "Upload Failed";
 }
 
@@ -45,4 +46,12 @@ const uploadFile = () => {
   ajax.addEventListener("abort", abortHandler, false);
   ajax.open("POST", host + "/api/upload");
   ajax.send(formData);
+
+  ajax.onreadystatechange = function () {
+    if (this.readyState === 4) {
+      get("response").innerHTML = this.responseText;
+      console.log(this.responseText)
+    }
+  }
+
 }

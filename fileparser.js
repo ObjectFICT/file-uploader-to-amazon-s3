@@ -16,84 +16,111 @@ const queueSize = config.get('queueSize'); // optional concurrency configuration
 const partSize = config.get('partSize') * 1024 * 1024; // optional size of each part, in bytes, at least 5MB
 const leavePartsOnError = config.get('leavePartsOnError'); // optional manually handle dropped parts
 
-const
-  fileParser = async (req) => {
-    return new Promise((resolve, reject) => {
-      let options = {
-        maxFileSize: maxFileSize,
-        allowEmptyFiles: allowEmptyFiles
+const fileParser = (req) => {
+  console.log(`Configuration`);
+  console.log(`Max file size - ${maxFileSize} bytes`);
+  console.log(`Allow empty files - ${allowEmptyFiles}`);
+  console.log(`Queue size - ${queueSize}`);
+  console.log(`Part size - ${partSize} bytees`);
+  console.log(`Leave parts on error - ${leavePartsOnError}`);
+
+  return new Promise((resolve, reject) => {
+    let options = {
+      maxFileSize: maxFileSize,
+      allowEmptyFiles: allowEmptyFiles
+    }
+
+    const form = formidable(options);
+
+    form.on('error', error => {
+      reject({
+        message: error.message,
+        code: error.code,
+        httpCode: error.httpCode
+      })
+    });
+
+    form.parse(req, (error, fields, files) => {
+      console.info("Start validate file!");
+
+      if (error) {
+        console.error("An error occurred while validating the file!");
+        console.error(error);
+
+        throw error;
       }
 
-      const form = formidable(options);
+      console.info("Finish validate file!");
+    });
 
-      form.parse(req, (err, fields, files) => {
-      });
+    form.on('data', data => {
+      if (data.$metadata.httpStatusCode === 200) {
+        console.info("Success uploaded!");
+        console.log("Upload info:");
+        console.log(data);
 
-      form.on('error', error => reject(error.message));
-
-      form.on('data', data => {
-        if (data.name === "successUpload") {
-          resolve(data.value);
-        }
-      })
-
-      form.on('fileBegin', (formName, file) => {
-
-        file.open = async function () {
-
-          this._writeStream = new Transform({
-            transform(chunk, encoding, callback) {
-              callback(null, chunk)
-            }
-          })
-
-          this._writeStream.on('error', err => {
-            resolve({ error: err })
-          });
-
-          const spitedOriginalFileName = this.originalFilename.split('.');
-          const formatFile = spitedOriginalFileName[spitedOriginalFileName.length - 1];
-          // upload to S3
-          new Upload({
-            client: new S3Client({
-              credentials: { accessKeyId, secretAccessKey }, region
-            }),
-            params: {
-              ACL: 'public-read',
-              Bucket,
-              Key: `${uuid()}.${formatFile}`,
-              Body: this._writeStream
-            },
-            tags: [], // optional tags
-            partSize: partSize,
-            queueSize: queueSize,
-            leavePartsOnError: leavePartsOnError,
-          })
-            .done()
-            .then(data => {
-              console.log(data)
-              resolve({
-                statusCode: data.$metadata.httpStatusCode,
-                post_uuid: data.Key,
-                s3_bucket_retrieval_link: data.Location
-              })
-            }).catch((err) => {
-            resolve({
-              error: err
-            })
-          })
-        }
-
-        file.end = function (cb) {
-          this._writeStream.on('finish', () => {
-            this.emit('end')
-            cb()
-          })
-
-          this._writeStream.end()
-        }
-      })
+        resolve({
+          statusCode: data.$metadata.httpStatusCode,
+          post_uuid: data.Key,
+          s3_bucket_retrieval_link: data.Location
+        })
+      }
     })
-  }
+
+    form.on('fileBegin', (formName, file) => {
+
+      file.open = function () {
+        const spitedOriginalFileName = this.originalFilename.split('.');
+        const formatFile = spitedOriginalFileName[spitedOriginalFileName.length - 1];
+
+        this._writeStream = new Transform({
+          transform(chunk, encoding, callback) {
+            callback(null, chunk)
+          }
+        })
+
+        this._writeStream.on('error', error => {
+          console.error(error);
+
+          reject({
+            message: error.message,
+            code: error.code,
+            httpCode: error.httpCode
+          });
+        });
+
+        console.info(`Start upload file ${uuid()}.${formatFile} to S3 bucket...`)
+
+        new Upload({
+          client: new S3Client({
+            credentials: { accessKeyId, secretAccessKey }, region
+          }),
+          params: {
+            ACL: 'public-read',
+            Bucket,
+            Key: `${uuid()}.${formatFile}`,
+            Body: this._writeStream
+          },
+          tags: [], // optional tags
+          partSize: partSize,
+          queueSize: queueSize,
+          leavePartsOnError: leavePartsOnError,
+        })
+          .done()
+          .then(data => form.emit('data', data))
+          .catch((error) => form.emit('error', error))
+      }
+
+      file.end = function (cb) {
+        this._writeStream.on('finish', () => {
+          this.emit('end')
+          cb()
+        })
+
+        this._writeStream.end()
+      }
+    })
+  })
+}
 
 module.exports = fileParser;
