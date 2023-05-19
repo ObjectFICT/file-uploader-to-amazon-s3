@@ -1,10 +1,10 @@
 require('dotenv').config();
+const path = require("path");
+const fileParser = require('./fileparser');
 
 const express = require('express');
 const app = express();
-const path = require("path");
 const PORT = process.env.PORT;
-const fileParser = require('./fileparser');
 
 app.set('json spaces', 5);
 app.use(express.static('public'))
@@ -14,6 +14,7 @@ app.get('/', (req, res) => {
 });
 
 app.post('/api/upload', async (req, res) => {
+  console.info("**********Start upload file process**********");
   await fileParser(req)
     .then(data => {
       res.status(200).json({
@@ -27,6 +28,7 @@ app.post('/api/upload', async (req, res) => {
         error: error
       })
     })
+  console.info("**********Finish upload file process**********");
 });
 
 app.listen(PORT, () => {

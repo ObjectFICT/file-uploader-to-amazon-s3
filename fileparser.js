@@ -10,15 +10,16 @@ const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
 const region = process.env.S3_REGION;
 const Bucket = process.env.S3_BUCKET;
 
-const maxFileSize = config.get('maxFileSize') * 1024 * 1024; //100 MBs converted to bytes
-const allowEmptyFiles = config.get('allowEmptyFiles');
+const maxFileSizeMB = config.get('maxFileSize'); // maximum download file size
+const maxFileSizeByte = maxFileSizeMB * 1024 * 1024; // MBs converted to bytes
+const allowEmptyFiles = config.get('allowEmptyFiles'); //
 const queueSize = config.get('queueSize'); // optional concurrency configuration
 const partSize = config.get('partSize') * 1024 * 1024; // optional size of each part, in bytes, at least 5MB
 const leavePartsOnError = config.get('leavePartsOnError'); // optional manually handle dropped parts
 
 const fileParser = (req) => {
   console.log(`Configuration`);
-  console.log(`Max file size - ${maxFileSize} bytes`);
+  console.log(`Max file size - ${maxFileSizeMB} MB`);
   console.log(`Allow empty files - ${allowEmptyFiles}`);
   console.log(`Queue size - ${queueSize}`);
   console.log(`Part size - ${partSize} bytees`);
@@ -26,15 +27,21 @@ const fileParser = (req) => {
 
   return new Promise((resolve, reject) => {
     let options = {
-      maxFileSize: maxFileSize,
+      maxFileSize: maxFileSizeByte,
       allowEmptyFiles: allowEmptyFiles
     }
 
     const form = formidable(options);
 
     form.on('error', error => {
+      const message = error.httpCode === 413
+        ? `The file size is too large! Max file size is ${maxFileSizeMB} MB!`
+        : error.code === 1010 && error.httpCode === 400
+          ? `Empty file or file with 0 MB size is not allowed!`
+          : error.message;
+
       reject({
-        message: error.message,
+        message: message,
         code: error.code,
         httpCode: error.httpCode
       })
