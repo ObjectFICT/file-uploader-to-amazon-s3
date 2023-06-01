@@ -17,7 +17,7 @@ const queueSize = config.get('queueSize'); // optional concurrency configuration
 const partSize = config.get('partSize') * 1024 * 1024; // optional size of each part, in bytes, at least 5MB
 const leavePartsOnError = config.get('leavePartsOnError'); // optional manually handle dropped parts
 
-const fileParser = (req) => {
+const putFile = (req) => {
   console.log(`Configuration`);
   console.log(`Max file size - ${maxFileSizeMB} MB`);
   console.log(`Allow empty files - ${allowEmptyFiles}`);
@@ -130,4 +130,4 @@ const fileParser = (req) => {
   })
 }
 
-module.exports = fileParser;
+module.exports = putFile;

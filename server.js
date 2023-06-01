@@ -1,6 +1,7 @@
 require('dotenv').config();
 const path = require("path");
-const fileParser = require('./fileparser');
+const fileParser = require('./src/putFile');
+const getFile = require('./src/getFile');
 
 const express = require('express');
 const app = express();
@@ -29,6 +30,14 @@ app.post('/api/upload', async (req, res) => {
       })
     })
   console.info("**********Finish upload file process**********");
+});
+
+app.get('/api/download', (req, res, next) => {
+  const fileKey = req.query['file'];
+
+  res.attachment(fileKey);
+
+  getFile(fileKey).pipe(res);
 });
 
 app.listen(PORT, () => {

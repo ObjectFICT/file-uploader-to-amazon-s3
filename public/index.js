@@ -55,3 +55,10 @@ const uploadFile = () => {
   }
 
 }
+
+const downloadFile = () => {
+  const host = window.location.protocol + "//" + window.location.host;
+  const fileName = get("fileName").value;
+
+  window.location.replace(host + "/api/download?file=" + fileName);
+}
