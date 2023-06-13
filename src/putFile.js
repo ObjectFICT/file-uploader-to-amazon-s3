@@ -79,6 +79,7 @@ const putFile = (req) => {
       file.open = function () {
         const spitedOriginalFileName = this.originalFilename.split('.');
         const formatFile = spitedOriginalFileName[spitedOriginalFileName.length - 1];
+        const contentType = req.query['type'];
 
         this._writeStream = new Transform({
           transform(chunk, encoding, callback) {
@@ -106,7 +107,8 @@ const putFile = (req) => {
             ACL: 'public-read',
             Bucket,
             Key: `${uuid()}.${formatFile}`,
-            Body: this._writeStream
+            Body: this._writeStream,
+            ContentType: contentType == null ? "application/octet-stream" : contentType
           },
           tags: [], // optional tags
           partSize: partSize,

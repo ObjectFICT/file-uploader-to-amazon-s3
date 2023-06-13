@@ -1,5 +1,5 @@
 {
-    "maxFileSize": 100,
+    "maxFileSize": 500,
     "allowEmptyFiles": false,
     "queueSize": 4,
     "partSize": 5,

@@ -35,6 +35,7 @@ const selectFileHandler = () => {
 const uploadFile = () => {
   const host = window.location.protocol + "//" + window.location.host;
   const file = get("uploadedFile").files[0];
+  const type = get("contentType").value;
   const formData = new FormData();
   const ajax = new XMLHttpRequest();
 
@@ -44,7 +45,7 @@ const uploadFile = () => {
   ajax.addEventListener("load", completeHandler, false);
   ajax.addEventListener("error", errorHandler, false);
   ajax.addEventListener("abort", abortHandler, false);
-  ajax.open("POST", host + "/api/upload");
+  ajax.open("POST", host + "/api/upload" + "?type=" + type);
   ajax.send(formData);
 
   ajax.onreadystatechange = function () {
