@@ -1,0 +1,8 @@
+.startRecordVideo {
+    background: red !important;
+    border: 5px white solid !important;
+}
+
+.disabled {
+    filter: invert(45%) !important;
+}
