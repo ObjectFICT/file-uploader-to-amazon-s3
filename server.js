@@ -1,4 +1,5 @@
 require('dotenv').config();
+const cors = require('cors');
 const path = require("path");
 const fileParser = require('./src/putFile');
 const getFile = require('./src/getFile');
@@ -6,15 +7,25 @@ const getFile = require('./src/getFile');
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT;
+const ALLOWED_URL = process.env.ALLOWED_URL;
 
 app.set('json spaces', 5);
 app.use(express.static('public'))
+
+const allowedList = [ALLOWED_URL]
+const corsOptions = (req, callback) => {
+  const corsOptions = allowedList.indexOf(req.header('Origin')) !== -1
+    ? { origin: true }
+    : { origin: false };
+
+  callback(null, corsOptions);
+}
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname + '/index.html'));
 });
 
-app.post('/api/upload', async (req, res) => {
+app.post('/api/upload', cors(corsOptions), async (req, res) => {
   console.info("**********Start upload file process**********");
   await fileParser(req)
     .then(data => {

@@ -53,8 +53,7 @@ const putFile = (req) => {
       if (error) {
         console.error("An error occurred while validating the file!");
         console.error(error);
-
-        throw error;
+        return;
       }
 
       console.info("Finish validate file!");

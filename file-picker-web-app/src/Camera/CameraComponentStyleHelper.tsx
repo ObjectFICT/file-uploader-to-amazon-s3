@@ -1,9 +1,9 @@
 import styled from 'styled-components';
-import makePhoto from './makePhoto.svg';
-import cameraRear from './camera-rear.svg';
-import upload from './uploadFile.svg';
-import close from './close.svg';
-import next from './next.svg';
+import makePhoto from '../image/makePhoto.svg';
+import cameraRear from '../image/camera-rear.svg';
+import upload from '../image/uploadFile.svg';
+import close from '../image/close.svg';
+import next from '../image/next.svg';
 
 export const Wrapper = styled.div`
   position: fixed;
@@ -16,22 +16,22 @@ export const Wrapper = styled.div`
 export const Control = styled.div`
   position: fixed;
   display: flex;
-  right: 0;
-  width: 20%;
+  width: 100%;
   min-width: 130px;
   min-height: 130px;
-  height: 100%;
+  height: 20%;
   background: rgba(0, 0, 0, 0.3);
   z-index: 10;
   align-items: center;
   justify-content: center;
   padding: 50px;
   box-sizing: border-box;
-  flex-direction: column-reverse;
+  bottom: 0;
+  flex-direction: row;
+
 
   @media (max-aspect-ratio: 1/1) {
     flex-direction: row;
-    bottom: 0;
     width: 100%;
     height: 20%;
   }
@@ -117,6 +117,12 @@ export const CameraMode = styled.div`
     width: 100%;
     height: 5%;
   }
+
+  @media (min-width: 870px) {
+    height: 10%;
+    width: 100%;
+    flex-direction: row;
+  }
 `;
 
 export const CameraModeButton = styled.div`
@@ -142,11 +148,11 @@ export const UploadControl = styled.div`
   height: 30%;
   z-index: 10;
   position: fixed;
-  right: 0;
+  bottom: 0;
   color: white;
   display: flex;
   flex-wrap: wrap;
-  flex-direction: column;
+  flex-direction: row;
   justify-content: space-between;
   text-align: center;
   align-items: center;
@@ -160,6 +166,7 @@ export const UploadControl = styled.div`
     width: 100%;
     height: 25%;
   }
+
 `;
 
 export const UploadControlButton = styled(Button)`
@@ -178,3 +185,13 @@ export const UploadButton = styled(UploadControlButton)`
 
 `;
 
+export const LoaderWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  z-index: 100000;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+`;

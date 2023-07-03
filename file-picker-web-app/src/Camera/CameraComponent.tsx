@@ -7,6 +7,7 @@ import {
   ChangeFacingCameraButton,
   CloseButton,
   Control,
+  LoaderWrapper,
   Preview,
   TakePhotoButton,
   UploadButton,
@@ -21,23 +22,39 @@ const CameraComponent = () => {
   const webcamRef = useRef<Webcam>(null);
   const [selectedMode, setSelectedMode] = useState('photo');
   const [emptyMode, setEmptyMode] = useState({ order: 2 });
-  const [image, setImage] = useState<String | null>(null);
-  const [file, setFile] = useState<File>();
   const [changeCamera, setChangeCamera] = useState('environment');
   const [capturing, setCapturing] = useState(false);
   const [recordedChunks, setRecordedChunks] = useState([]);
   const [videoFormat, setVideoFormat] = useState<string | null>();
   const [deviceId, setDeviceId] = useState({});
   const [devices, setDevices] = useState([]);
-  const videoConstraints = { video: true, facingMode: { exact: changeCamera } };
-  const videoConstraintsForChrome = { video: true, deviceId: { exact: deviceId } }
-  const audioConstraints = { noiseSuppression: true, echoCancellation: true };
   const [isReadyToUpload, setReadyToUpload] = useState(false);
   const [preview, setPreview] = useState<any>()
   const [videoURL, setVideoURL] = useState<string>();
+  const [file, setFile] = useState<File>();
+  const [isUploading, setUploading] = useState(false);
+  const videoConstraints = { video: true, facingMode: { exact: changeCamera } };
+  const videoConstraintsForChrome = { video: true, deviceId: { exact: deviceId } }
+  const audioConstraints = { noiseSuppression: true, echoCancellation: true };
 
   // @ts-ignore
-  const isChrome = !!window.chrome && (!!window.chrome.webstore || !!window.chrome.runtime);
+  const isChrome = () => {
+    // @ts-ignore
+    const isChromium = window.chrome;
+    const winNav = window.navigator;
+    const vendorName = winNav.vendor;
+    // @ts-ignore
+    const isOpera = typeof window.opr !== 'undefined';
+    const isIEedge = winNav.userAgent.indexOf('Edg') > -1;
+    const isIOSChrome = winNav.userAgent.match('CriOS');
+    let isChrome = false;
+    if (isIOSChrome) {
+      // is Google Chrome on IOS
+      return false;
+    } else return isChromium !== null &&
+      typeof isChromium !== 'undefined' &&
+      vendorName === 'Google Inc.' && !isOpera && !isIEedge;
+  };
 
   const handleDevices = useCallback(
     // @ts-ignore
@@ -48,11 +65,13 @@ const CameraComponent = () => {
   const capture = useCallback(() => {
     if (webcamRef.current) {
       let screen = webcamRef.current.getScreenshot();
-      setImage(screen);
+      if (screen !== null) {
+        setFile(base64ToFile(screen))
+      }
       setReadyToUpload(true);
       setPreview(screen);
     }
-  }, [webcamRef, setImage]);
+  }, [webcamRef, setFile]);
 
   const handleStartCaptureClick = useCallback(() => {
     if (webcamRef.current) {
@@ -63,18 +82,18 @@ const CameraComponent = () => {
         options = {
           mimeType: 'video/webm; codecs=vp9'
         };
-        setVideoFormat('webm');
+        setVideoFormat('video/webm');
       } else if (MediaRecorder.isTypeSupported('video/webm')) {
         options = {
           mimeType: 'video/webm'
         };
-        setVideoFormat('webm');
+        setVideoFormat('video/webm');
       } else if (MediaRecorder.isTypeSupported('video/mp4')) {
         options = {
           mimeType: 'video/mp4',
           videoBitsPerSecond: 100000
         };
-        setVideoFormat('mp4');
+        setVideoFormat('video/mp4');
       } else {
         console.error('No suitable mimetype found for this device');
         alert('No suitable mimetype found for this device');
@@ -109,13 +128,36 @@ const CameraComponent = () => {
 
   }, [mediaRecorderRef, webcamRef, setCapturing, recordedChunks]);
 
+  const base64ToFile = (URI: string) => {
+    const byteString = atob(URI.split(',')[1]);
+    const type = URI.split(',')[0].split(':')[1].split(';')[0]
+    const arrayBuffer = new ArrayBuffer(byteString.length);
+    const uint8Array = new Uint8Array(arrayBuffer);
+
+    for (let i = 0; i < byteString.length; i++) {
+      uint8Array[i] = byteString.charCodeAt(i);
+    }
+
+    return new File(
+      [new Blob([arrayBuffer])],
+      'image.' + type.split('/')[1],
+      { type: type }
+    );
+  }
 
   const selectFileFromGallery = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFile(e.target.files[0]);
       setReadyToUpload(true);
+      setFile(e.target.files[0]);
       const url = URL.createObjectURL(e.target.files[0]);
-      selectedMode === 'video' ? setVideoURL(url) : setPreview(url);
+
+      if (selectedMode === 'photo') {
+        setPreview(url)
+      }
+
+      if (selectedMode === 'video') {
+        setVideoURL(url)
+      }
     }
   }
 
@@ -140,7 +182,7 @@ const CameraComponent = () => {
   }
 
   const changeCameraView = () => {
-    if (!isChrome) {
+    if (!isChrome()) {
       setChangeCamera(changeCamera === 'user' ? 'environment' : 'user');
     }
   }
@@ -154,25 +196,32 @@ const CameraComponent = () => {
   }
 
   const upload = () => {
-    if (image == null) {
+    if (file === undefined) {
+      alert('Something happened:( Please try again!')
       return;
     }
-    const type = 'image/png'
-    // const data = new FormData();
-    // data.append('file', image.toString())
 
-    fetch('http://ec2-100-24-118-157.compute-1.amazonaws.com/api/upload?type=' + type, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        // 'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: dataURItoBlob(image.toString(), () => {
-      })
-    })
-      .then((res) => res.json())
-      .then((data) => console.log(data))
-      .catch((err) => console.error(err));
+    setUploading(true)
+
+    const url = 'https://7oxazxpmsm.loclx.io/api/upload?type=' + file.type;
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const ajax = new XMLHttpRequest();
+    ajax.onload = () => {
+      setUploading(false)
+      alert('File uploaded!');
+      setReadyToUpload(false)
+
+    };
+    ajax.onerror = () => {
+      setUploading(false)
+      alert('Something happened:( Please try again later!');
+      setReadyToUpload(false)
+    }
+
+    ajax.open('POST', url);
+    ajax.send(formData);
   }
 
   useEffect(
@@ -186,7 +235,9 @@ const CameraComponent = () => {
   useEffect(
     () => {
       if (videoFormat != null) {
-        setVideoURL(URL.createObjectURL(new Blob(recordedChunks, { type: videoFormat })))
+        const blob = new Blob(recordedChunks, { type: videoFormat });
+        setVideoURL(URL.createObjectURL(blob));
+        setFile(new File([blob], 'video.' + videoFormat.split('/')[1], { type: videoFormat }))
       }
     },
     [recordedChunks]
@@ -194,13 +245,20 @@ const CameraComponent = () => {
 
   return (
     <Wrapper>
+      {
+        isUploading &&
+        <LoaderWrapper>
+          <div className="loader">Loading...</div>
+        </LoaderWrapper>
+      }
+
       {!isReadyToUpload ?
         <WebcamWrapper>
           <Webcam audio={true}
                   muted={true}
                   ref={webcamRef}
             // @ts-ignore
-                  videoConstraints={isChrome ? videoConstraintsForChrome : videoConstraints}
+                  videoConstraints={isChrome() ? videoConstraintsForChrome : videoConstraints}
                   audioConstraints={audioConstraints}
                   height={'100%'}
                   width={'100%'}
@@ -212,8 +270,9 @@ const CameraComponent = () => {
         :
         <Preview>
           {selectedMode === 'video' ?
+            // <ReactPlayer url={videoURL}/>
             <video key={videoURL} width="100%" controls>
-              <source src={videoURL}/>
+              <source src={videoURL} type={'video/webm'}/>
             </video>
             :
             <img style={{ width: '100%', }} src={preview} alt={'Image'}/>
@@ -249,8 +308,8 @@ const CameraComponent = () => {
                              onClick={makePhotoOrVideo}/>
             {!capturing &&
               <ChangeFacingCameraButton
-                className={devices.length <= 1 && isChrome ? 'disabled' : ''}
-                disabled={devices.length <= 1 && isChrome}
+                className={devices.length <= 1 && isChrome() ? 'disabled' : ''}
+                disabled={devices.length <= 1 && isChrome()}
                 onClick={changeCameraView}/>
             }
           </Control>
@@ -265,25 +324,5 @@ const CameraComponent = () => {
     </Wrapper>
   );
 };
-
-function dataURItoBlob(dataURI: string, callback: any) {
-  // convert base64 to raw binary data held in a string
-  // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
-  var byteString = atob(dataURI.split(',')[1]);
-
-  // separate out the mime component
-  var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0]
-
-  // write the bytes of the string to an ArrayBuffer
-  var ab = new ArrayBuffer(byteString.length);
-  var ia = new Uint8Array(ab);
-  for (var i = 0; i < byteString.length; i++) {
-    ia[i] = byteString.charCodeAt(i);
-  }
-
-  // write the ArrayBuffer to a blob, and you're done
-  var bb = new Blob([ab]);
-  return bb;
-}
 
 export default CameraComponent;
