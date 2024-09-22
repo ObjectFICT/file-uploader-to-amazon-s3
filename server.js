@@ -21,11 +21,13 @@ const corsOptions = (req, callback) => {
   callback(null, corsOptions);
 }
 
+app.use(cors());
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname + '/index.html'));
 });
 
-app.post('/api/upload', cors(corsOptions), async (req, res) => {
+app.post('/api/upload', cors(), async (req, res) => {
   console.info("**********Start upload file process**********");
   await fileParser(req)
     .then(data => {
