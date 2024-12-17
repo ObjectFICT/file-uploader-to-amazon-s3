@@ -78,7 +78,7 @@ const putFile = (req) => {
       file.open = function () {
         const spitedOriginalFileName = this.originalFilename.split('.');
         const formatFile = spitedOriginalFileName[spitedOriginalFileName.length - 1];
-        const contentType = req.query['type'];
+        const contentType = req.query['type'] ?? this.mimetype;
 
         this._writeStream = new Transform({
           transform(chunk, encoding, callback) {

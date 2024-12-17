@@ -50,7 +50,21 @@ app.get('/api/download', (req, res, next) => {
 
   res.attachment(fileKey);
 
-  getFile(fileKey).pipe(res);
+  getFile(fileKey)
+    .then((stream) => {
+      stream.pipe(res)
+    })
+    .catch(error => {
+      res.status(500).json({
+        error: error
+      });
+    });
+});
+
+app.get('/api/health', (req, res, next) => {
+  res.status(200).json({
+    health: "OK"
+  })
 });
 
 app.listen(PORT, () => {

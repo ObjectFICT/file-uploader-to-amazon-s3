@@ -22,13 +22,26 @@ const getFile = (fileKey) => {
     Key: fileKey,
   };
 
-  return s3.getObject(options, (error, data) => {
-    if (error != null) {
-      console.log("Failed to retrieve an object: " + error)
-    } else {
-      console.log("Loaded " + data.ContentLength + " bytes from S3 bucket");
-    }
-  }).createReadStream();
+  return new Promise((resolve, reject) => {
+    s3.headObject(options, (err, metadata) => {
+      if (err) {
+        console.error(`Error checking file existence!`);
+        return reject(`File does not exist!`);
+      }
+
+      console.log('File exists, starting download...');
+
+      const readStream = s3.getObject(options, (error, data) => {
+        if (error != null) {
+          console.error("Failed to retrieve an object: " + error)
+        } else {
+          console.log("Loaded " + data.ContentLength + " bytes from S3 bucket");
+        }
+      }).createReadStream();
+
+      resolve(readStream);
+    });
+  });
 }
 
 module.exports = getFile;
