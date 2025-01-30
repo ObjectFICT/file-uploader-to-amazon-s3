@@ -4,6 +4,7 @@ const { Upload } = require("@aws-sdk/lib-storage");
 const { S3Client } = require("@aws-sdk/client-s3");
 const { uuid } = require('uuidv4');
 const config = require('config')
+const sharp = require('sharp');
 
 const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
 const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
@@ -17,14 +18,9 @@ const queueSize = config.get('queueSize'); // optional concurrency configuration
 const partSize = config.get('partSize') * 1024 * 1024; // optional size of each part, in bytes, at least 5MB
 const leavePartsOnError = config.get('leavePartsOnError'); // optional manually handle dropped parts
 
-const putFile = (req) => {
-  console.log(`Configuration`);
-  console.log(`Max file size - ${maxFileSizeMB} MB`);
-  console.log(`Allow empty files - ${allowEmptyFiles}`);
-  console.log(`Queue size - ${queueSize}`);
-  console.log(`Part size - ${partSize} bytees`);
-  console.log(`Leave parts on error - ${leavePartsOnError}`);
+const formatForCompression = ["jpeg", "jpg", "png", "webp", "avif"];
 
+const putFile = (req, quality) => {
   return new Promise((resolve, reject) => {
     let options = {
       maxFileSize: maxFileSizeByte,
@@ -79,22 +75,56 @@ const putFile = (req) => {
         const spitedOriginalFileName = this.originalFilename.split('.');
         const formatFile = spitedOriginalFileName[spitedOriginalFileName.length - 1];
         const contentType = req.query['type'] ?? this.mimetype;
+        let body;
 
-        this._writeStream = new Transform({
-          transform(chunk, encoding, callback) {
-            callback(null, chunk)
-          }
-        })
-
-        this._writeStream.on('error', error => {
-          console.error(error);
-
-          reject({
-            message: error.message,
-            code: error.code,
-            httpCode: error.httpCode
+        if (formatForCompression.includes(formatFile.toLowerCase())) {
+          const transformStream = new Transform({
+            transform(chunk, encoding, callback) {
+              callback(null, chunk);
+            }
           });
-        });
+
+          this._writeStream = transformStream;
+          let compressedStream = sharp();
+          switch (formatFile) {
+            case 'jpeg':
+            case 'jpg':
+              compressedStream = compressedStream.jpeg({ quality });
+              break;
+            case 'png':
+              compressedStream = compressedStream.png({ quality });
+              break;
+            case 'webp':
+              compressedStream = compressedStream.webp({ quality });
+              break;
+            case 'avif':
+              compressedStream = compressedStream.avif({ quality });
+              break;
+            default:
+              console.warn("Unsupported format! Skipping compression...");
+          }
+
+          body = compressedStream;
+          transformStream.pipe(compressedStream);
+        } else {
+          this._writeStream = new Transform({
+            transform(chunk, encoding, callback) {
+              callback(null, chunk)
+            }
+          })
+
+          this._writeStream.on('error', error => {
+            console.error(error);
+
+            reject({
+              message: error.message,
+              code: error.code,
+              httpCode: error.httpCode
+            });
+          });
+
+          body = this._writeStream;
+        }
 
         console.info(`Start upload file ${uuid()}.${formatFile} to S3 bucket...`)
 
@@ -106,7 +136,7 @@ const putFile = (req) => {
             ACL: 'public-read',
             Bucket,
             Key: `${uuid()}.${formatFile}`,
-            Body: this._writeStream,
+            Body: body,
             ContentType: contentType == null ? "application/octet-stream" : contentType
           },
           tags: [], // optional tags

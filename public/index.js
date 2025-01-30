@@ -50,7 +50,7 @@ const uploadFile = () => {
 
   ajax.onreadystatechange = function () {
     if (this.readyState === 4) {
-      get("response").innerHTML = this.responseText;
+      get("response").innerHTML = JSON.stringify(JSON.parse(this.responseText), null, 2);
       console.log(this.responseText)
     }
   }

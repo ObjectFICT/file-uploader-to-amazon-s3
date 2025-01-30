@@ -3,6 +3,7 @@
 <head>
     <title>File picker</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <link rel="icon" type="image/png" href="/images/upload-icon.png">
 </head>
 <body>
 <div style="display: flex; ">
@@ -18,18 +19,9 @@
         <p id="uploadedFileSize"></p>
         <button onclick="uploadFile()">Upload</button>
         <h3>Response</h3>
-        <p id="response"></p>
+        <pre id="response"
+             style=" background: #f4f4f4; padding: 10px; border-radius: 5px; font-family: monospace; white-space: pre-wrap;"></pre>
     </div>
-<!--    <div style="width: 50%">-->
-<!--        <h2>Download file from AWS S3 Bucket</h2>-->
-<!--        <label>-->
-<!--            Write file name <br> File name structure {UUID}.{Format} <br>-->
-<!--            Example: <i>df17a877-e6e3-4b27-bb8b-e550b195ed7c.pdf</i> <br>-->
-<!--            <input type="text" name="fileName" id="fileName" style="width: 50%"/>-->
-<!--        </label>-->
-
-<!--        <button onclick="downloadFile()">Download</button>-->
-<!--    </div>-->
 </div>
 <script src="/index.js"></script>
 </body>

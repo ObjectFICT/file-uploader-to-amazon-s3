@@ -5,6 +5,7 @@ const fileParser = require('./src/putFile');
 const getFile = require('./src/getFile');
 
 const express = require('express');
+const config = require("config");
 const app = express();
 const PORT = process.env.PORT;
 const ALLOWED_URL = process.env.ALLOWED_URL;
@@ -21,6 +22,21 @@ const corsOptions = (req, callback) => {
   callback(null, corsOptions);
 }
 
+const showConfig = () => {
+  const maxFileSizeMB = config.get('maxFileSize'); // maximum download file size
+  const allowEmptyFiles = config.get('allowEmptyFiles');
+  const queueSize = config.get('queueSize'); // optional concurrency configuration
+  const partSize = config.get('partSize') * 1024 * 1024; // optional size of each part, in bytes, at least 5MB
+  const leavePartsOnError = config.get('leavePartsOnError'); // optional manually handle dropped parts
+
+  console.log(`Configuration`);
+  console.log(`Max file size - ${maxFileSizeMB} MB`);
+  console.log(`Allow empty files - ${allowEmptyFiles}`);
+  console.log(`Queue size - ${queueSize}`);
+  console.log(`Part size - ${partSize} bytees`);
+  console.log(`Leave parts on error - ${leavePartsOnError}`);
+}
+
 app.use(cors());
 
 app.get('/', (req, res) => {
@@ -29,7 +45,9 @@ app.get('/', (req, res) => {
 
 app.post('/api/upload', cors(), async (req, res) => {
   console.info("**********Start upload file process**********");
-  await fileParser(req)
+  showConfig();
+
+  await fileParser(req, 25)
     .then(data => {
       res.status(200).json({
         statusCode: data.statusCode,
